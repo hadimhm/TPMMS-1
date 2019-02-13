@@ -45,38 +45,35 @@ struct CLAIM_SCHEMA { // the datatype class used by the priority_queue
     :
     datum(datum),
     stream(stream),
-    comparisonFunction(comparisonFunction) {}
-    // comparison operator for maps keyed on this structure
+    comparisonFunction(comparisonFunction) {} //    comparison operator for maps keyed on this structure
     bool operator < (const CLAIM_SCHEMA &a) const
     {
-         //recall that priority queues try to sort from
-         //highest to lowest. thus, we need to negate.
-         return !(datum < a.datum);
+        return !(datum < a.datum); //  recall that priority queues try to sort from highest to lowest. thus, we need to negate.
     }
 };
 struct KwayMergeSort {
-KwayMergeSort(const std::string &inFile, // constructor, using CLAIM's overloaded < operator.  Must be defined.
-              const std::string &outFile,
-              int  maxBufferSize,
-              std::string tempPath);
-~KwayMergeSort(void); //    destructor
-void Sort();            // Sort the data
-
-std::string _inFile;
-bool (*_compareFunction)(const CLAIM &a, const CLAIM &b);
-std::string _tempPath;
-std::vector<std::string> _vTempFileNames;
-std::vector<std::ifstream*> _vTempFiles;
-unsigned int _maxBufferSize;
-unsigned int _runCounter;
-std::string _outFile;
-void DivideAndSort(); //    drives the creation of sorted sub-files stored on disk.
-// drives the merging of the sorted temp files.
-// final, sorted and merged output is written to an output file.
-void Merge();
-void WriteToTempFile(const std::vector<CLAIM> &lines);
-void OpenTempFiles();
-void CloseTempFiles();
+    KwayMergeSort(const std::string &inFile, // constructor, using CLAIM's overloaded < operator.  Must be defined.
+                  const std::string &outFile,
+                  int  maxBufferSize,
+                  std::string tempPath);
+    ~KwayMergeSort(void); //    destructor
+    void Sort();            // Sort the data
+    
+    std::string _inFile;
+    bool (*_compareFunction)(const CLAIM &a, const CLAIM &b);
+    std::string _tempPath;
+    std::vector<std::string> _vTempFileNames;
+    std::vector<std::ifstream*> _vTempFiles;
+    unsigned int _maxBufferSize;
+    unsigned int _runCounter;
+    std::string _outFile;
+    void DivideAndSort(); //    drives the creation of sorted sub-files stored on disk.
+    // drives the merging of the sorted temp files.
+    // final, sorted and merged output is written to an output file.
+    void Merge();
+    void WriteToTempFile(const std::vector<CLAIM> &lines);
+    void OpenTempFiles();
+    void CloseTempFiles();
 };
 KwayMergeSort::KwayMergeSort (const std::string &inFile, // constructor
                               const std::string &outFile,
@@ -84,7 +81,6 @@ KwayMergeSort::KwayMergeSort (const std::string &inFile, // constructor
                               std::string tempPath)
 : _inFile(inFile)
 , _outFile(outFile)
-, _compareFunction(NULL)
 , _tempPath(tempPath)
 , _maxBufferSize(maxBufferSize)
 , _runCounter(0) {}
@@ -109,8 +105,7 @@ void KwayMergeSort::OpenTempFiles() {
         std::ifstream *file = nullptr;
         file = new std::ifstream(_vTempFileNames[i].c_str(), std::ios::in);
         if (file->good() == true) {
-            // add a pointer to the opened temp file to the list
-            _vTempFiles.push_back(file);
+            _vTempFiles.push_back(file); // add a pointer to the opened temp file to the list
         }
         else {
             std::cerr << "Unable to open temp file (" << _vTempFileNames[i]
@@ -130,22 +125,18 @@ void KwayMergeSort::CloseTempFiles() {
     }
 }
 void KwayMergeSort::WriteToTempFile(const std::vector<CLAIM> &lineBuffer) {
-    // name the current tempfile
-    std::stringstream tempFileSS;
+    std::stringstream tempFileSS; //    name the current tempfile
     if (_tempPath.size() == 0)
         tempFileSS << _inFile << "." << _runCounter;
     else
         tempFileSS << _tempPath << "/" << stl_basename(_inFile) << "." << _runCounter;
     std::string tempFileName = tempFileSS.str();
-    // do we want a regular or a gzipped tempfile?
     std::ofstream *output;
     output = new std::ofstream(tempFileName.c_str(), std::ios::out);
-    // write the contents of the current buffer to the temp file
-    for (size_t i = 0; i < lineBuffer.size(); ++i) {
+    for (size_t i = 0; i < lineBuffer.size(); ++i) { // write the contents of the current buffer to the temp file
         *output << lineBuffer[i] << std::endl;
     }
-    // update the tempFile number and add the tempFile to the list of tempFiles
-    ++_runCounter;
+    ++_runCounter; //   update the tempFile number and add the tempFile to the list of tempFiles
     output->close();
     delete output;
     _vTempFileNames.push_back(tempFileName);
@@ -183,12 +174,9 @@ void KwayMergeSort::Merge() { //    Merge the sorted temp files.
         *_vTempFiles[i] >> line;
         outQueue.push(CLAIM_SCHEMA(line, _vTempFiles[i], _compareFunction));
     }
-    // keep working until the queue is empty
-    while (outQueue.empty() == false) {
-        // grab the lowest element, print it, then ditch it.
-        CLAIM_SCHEMA lowest = outQueue.top();
-        // write the entry from the top of the queue
-        *output << lowest.datum << std::endl;
+    while (outQueue.empty() == false) { //  keep working until the queue is empty
+        CLAIM_SCHEMA lowest = outQueue.top();  //   grab the lowest element, print it, then ditch it.
+        *output << lowest.datum << std::endl; //    write the entry from the top of the queue
         outQueue.pop(); //  remove this record from the queue
         *(lowest.stream) >> line; //    add the next line from the lowest stream (above) to the queue as long as it's not EOF.
         if (*(lowest.stream))
