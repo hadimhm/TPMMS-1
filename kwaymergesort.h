@@ -10,16 +10,16 @@
 #include <vector>
 #include <queue>
 #include <sys/stat.h>
-#include <libgen.h> //  for basename()
+#include <libgen.h> //  concerning the basename() function
 struct CLAIM { //   a basic struct for a CLAIM entry.
     char clientID[10];
     char compensationAmount[10];
-    bool operator < (const CLAIM &b) const //   overload the < (less than) operator for coparison between CLAIM records
+    bool operator < (const CLAIM &b) const //   overload the < (less than) operator for comparison between CLAIM records
     {
-        if      (atoi(clientID) < atoi(b.clientID))  return true;
+        if      (atoi(clientID) < atoi(b.clientID))  return true; //    convert clientID character arrays into integers in order to be able to compare their values.
         else if (atoi(clientID) > atoi(b.clientID))  return false;
         //  the program gets here when clientIDs are the same. now it tries to sort based on compensationAmounts.
-        if      (atof(compensationAmount) < atof(b.compensationAmount))  return true;
+        if      (atof(compensationAmount) < atof(b.compensationAmount))  return true; //    convert compensationAmount character arrays into floats in order to be able to compare their values.
         else return false;
     }
     friend std::ostream& operator<<(std::ostream &os, const CLAIM &b) //    overload the << operator for writing a CLAIM struct
@@ -61,15 +61,11 @@ public:
         return !(data < a.data);
     }
 };
-//************************************************
-// DECLARATION
-// Class methods and elements
-//************************************************
 class KwayMergeSort {
 public:
     // constructor, using CLAIM's overloaded < operator.  Must be defined.
     KwayMergeSort(const std::string &inFile,
-                  std::ostream *out,
+                  const std::string &outFile,
                   int  maxBufferSize  = 2000,
                   bool compressOutput = false,
                   std::string tempPath     = "./");
@@ -88,7 +84,7 @@ private:
     unsigned int _runCounter;
     bool _compressOutput;
     bool _tempFileUsed;
-    std::ostream *_out;
+    std::string _outFile;
     // drives the creation of sorted sub-files stored on disk.
     void DivideAndSort();
     // drives the merging of the sorted temp files.
@@ -98,18 +94,14 @@ private:
     void OpenTempFiles();
     void CloseTempFiles();
 };
-//************************************************
-// IMPLEMENTATION
-// Class methods and elements
-//************************************************
 // constructor
 KwayMergeSort::KwayMergeSort (const std::string &inFile,
-                                 std::ostream *out,
-                                 int maxBufferSize,
-                                 bool compressOutput,
-                                 std::string tempPath)
+                              const std::string &outFile,
+                              int maxBufferSize,
+                              bool compressOutput,
+                              std::string tempPath)
 : _inFile(inFile)
-, _out(out)
+, _outFile(outFile)
 , _compareFunction(NULL)
 , _tempPath(tempPath)
 , _maxBufferSize(maxBufferSize)
@@ -176,16 +168,6 @@ void KwayMergeSort::DivideAndSort() {
             WriteToTempFile(lineBuffer);
             //WriteToTempFile(lineBuffer);
         }
-        // otherwise, the entire file fit in the memory given,
-        // so we can just dump to the output.
-        else {
-            if (_compareFunction != NULL)
-                sort(lineBuffer.begin(), lineBuffer.end(), *_compareFunction);
-            else
-                sort(lineBuffer.begin(), lineBuffer.end());
-            for (size_t i = 0; i < lineBuffer.size(); ++i)
-                *_out << lineBuffer[i] << std::endl;
-        }
     }
 }
 void KwayMergeSort::WriteToTempFile(const std::vector<CLAIM> &lineBuffer) {
@@ -216,6 +198,7 @@ void KwayMergeSort::Merge() { //    Merge the sorted temp files.
     // uses a priority queue, with the values being a pair of the record from the file, and the stream from which the record came
     // open the sorted temp files up for merging.
     // loads ifstream pointers into _vTempFiles
+    std::ostream *output = new std::ofstream(_outFile.c_str(), std::ios::out);
     OpenTempFiles();
     // priority queue for the buffer.
     std::priority_queue< MERGE_DATA > outQueue;
@@ -230,7 +213,7 @@ void KwayMergeSort::Merge() { //    Merge the sorted temp files.
         // grab the lowest element, print it, then ditch it.
         MERGE_DATA lowest = outQueue.top();
         // write the entry from the top of the queue
-        *_out << lowest.data << std::endl;
+        *output << lowest.data << std::endl;
         // remove this record from the queue
         outQueue.pop();
         // add the next line from the lowest stream (above) to the queue
