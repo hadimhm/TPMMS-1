@@ -1,43 +1,65 @@
-//  kwaymergesort.h
+//  Kwaymergesort.h
 //  Created by Sina Pilehchiha on 2019-02-09.
-//  Copyright © 2019 T9. All rights reserved.
+//  Copyright © 2019 TeamNumber02. All rights reserved.
+
 #ifndef KWAYMERGESORT_H
 #define KWAYMERGESORT_H
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <queue>
-#include <libgen.h> //  concerning the basename() function
-#include <string>
-struct CLAIM { //   a basic struct for a CLAIM entry.
+
+//  includes
+#include <iostream> //  This header is part of the Input/output library.
+#include <fstream> //   This header is also part of the Input/Output library.
+#include <sstream> //   This header is, too, part of the Input/Output library.
+#include <queue> // This header is part of the containers library.
+#include <libgen.h> //  This header concerns the basename() function
+
+//  below, there is a basic struct for a CLAIM entry.
+//  a CLAIM tuple's structure gets defined as a new data structure.
+struct CLAIM {
     
-    char clientID[10]; //   data
-    char compensationAmount[10]; // data
-    bool operator < (const CLAIM &b) const //   overload the < (less than) operator for comparison between CLAIM records
+    //  The following two variable are actually the only attributes from the CLAIM relation that the sorter needs
+    //  to process the designated query in the project description file.
+    //   data
+    char clientID[10];
+    char compensationAmount[10];
+    
+    //   overload the < (less than) operator for comparison between CLAIM records.
+    bool operator < (const CLAIM &claim) const
     {
-        if(strcmp(clientID, b.clientID) != 0) {
-            if      (atoi(clientID) < atoi(b.clientID))  return true; //    convert clientID character arrays into integers in order to be able to compare their values.
-            else if (atoi(clientID) > atoi(b.clientID))  return false;
+        //  first try to compare clinetIDs in char format.
+        //  if equal, compare their compensationAmounts.
+        if (std::strcmp(clientID, claim.clientID) != 0) {
+            
+             //    convert clientID character arrays into integers in order to compare their values.
+            if      (atoi(clientID) < atoi(claim.clientID))  return true;
+            else if (atoi(clientID) > atoi(claim.clientID))  return false;
         }
-        //  the program gets here when clientIDs are the same. now it tries to sort based on compensationAmounts.
-        if      (atof(compensationAmount) < atof(b.compensationAmount))  return true; //    convert compensationAmount character arrays into floats in order to be able to compare their values.
+        
+        //  the sorter gets here when clientIDs are the same. now it tries to sort based on compensationAmounts.
+        //  convert compensationAmount character arrays into floats in order to compare their values.
+        if      (atof(compensationAmount) < atof(claim.compensationAmount))  return true;
         else return false;
     }
-    friend std::ostream& operator<<(std::ostream &os, const CLAIM &b) //    overload the << operator for writing a CLAIM struct
+    
+    //    overload the << operator for writing a CLAIM record.
+    friend std::ostream& operator<<(std::ostream &os, const CLAIM &claim)
     {
-        os << std::string(18, ' ') << b.clientID << std::string(214, ' ') << b.compensationAmount;
+        //  The reason for inserting whitespace into the output stream is to retain the initial data format from the input file.
+        os << std::string(18, ' ') << claim.clientID << std::string(214, ' ') << claim.compensationAmount;
         return os;
     }
-    friend std::istream& operator>>(std::istream &is, CLAIM &b) //  overload the >> operator for reading into a CLAIM struct
+    
+    //  overload the >> operator for reading into a CLAIM record.
+    friend std::istream& operator>>(std::istream &is, CLAIM &claim)
     {
-        is.ignore(18);
-        is.get(b.clientID, 10);
-        is.ignore(214);
-        is.get(b.compensationAmount, 10);
+        is.ignore(18); //   ignore claimNumber and claimDate.
+        is.get(claim.clientID, 10);
+        is.ignore(214); //  ignore clientName, clientAddress, clientEmailAddress, insuredItemID, and damageAmount.
+        is.get(claim.compensationAmount, 10);
         is.ignore(1); // ignore the whitespace character at the end of each line of input
         return is;
     }
 };
+
 struct CLAIM_SCHEMA { // the datatype class used by the priority_queue
     CLAIM datum; //  data
     std::istream *stream;
@@ -54,11 +76,12 @@ struct CLAIM_SCHEMA { // the datatype class used by the priority_queue
         return !(datum < a.datum); //  recall that priority queues try to sort from highest to lowest. thus, we need to negate.
     }
 };
+
 struct KwayMergeSort {
     KwayMergeSort(const std::string &inFile, // constructor, using CLAIM's overloaded < operator.  Must be defined.
                   const std::string &outFile,
-                  //const std::string &outFile2,
-                  int  maxBufferSize,
+                  const std::string &outFile2,
+                  const std::string  &maxBufferSize,
                   std::string tempPath);
     ~KwayMergeSort(void); //    destructor
     void Sort(); // Sort the data
@@ -68,10 +91,10 @@ struct KwayMergeSort {
     std::string _tempPath;
     std::vector<std::string> _vTempFileNames;
     std::vector<std::ifstream*> _vTempFiles;
-    unsigned int _maxBufferSize;
+    std::string _maxBufferSize;
     unsigned int _runCounter;
     std::string _outFile;
-    //std::string _outFile2;
+    std::string _outFile2;
     void DivideAndSort(); //    drives the creation of sorted sub-files stored on disk.
     void Merge(); //    drives the merging of the sorted temp files.
     void WriteToTempFile(const std::vector<CLAIM> &lines); //   final, sorted and merged output is written to an output file.
@@ -81,12 +104,12 @@ struct KwayMergeSort {
 };
 KwayMergeSort::KwayMergeSort (const std::string &inFile, // constructor
                               const std::string &outFile,
-                              //const std::string &outFile2,
-                              int maxBufferSize,
+                              const std::string &outFile2,
+                              const std::string  &maxBufferSize,
                               std::string tempPath)
 : _inFile(inFile)
 , _outFile(outFile)
-//, _outFile2(outFile2)
+, _outFile2(outFile2)
 , _tempPath(tempPath)
 , _maxBufferSize(maxBufferSize)
 , _runCounter(0) {}
@@ -94,7 +117,7 @@ KwayMergeSort::~KwayMergeSort(void) {} //   destructor
 void KwayMergeSort::Sort() { // API for sorting.
     DivideAndSort();
     Merge();
-    //topTen();
+    //    topTen();
 }
 std::string stl_basename(const std::string &path) { //   STLized version of basename() (because POSIX basename() modifies the input string pointer.)
     std::string result;
@@ -108,7 +131,6 @@ std::string stl_basename(const std::string &path) { //   STLized version of base
     return result;
 }
 void KwayMergeSort::OpenTempFiles() {
-    std::cout << _vTempFileNames.size() << "\n";
     for (size_t i=0; i < _vTempFileNames.size(); ++i) {
         std::ifstream *file = nullptr;
         file = new std::ifstream(_vTempFileNames[i].c_str(), std::ios::in);
@@ -152,13 +174,14 @@ void KwayMergeSort::WriteToTempFile(const std::vector<CLAIM> &lineBuffer) {
 void KwayMergeSort::DivideAndSort() {
     std::istream *input = new std::ifstream(_inFile.c_str(), std::ios::in);
     std::vector<CLAIM> lineBuffer;
-    lineBuffer.reserve(_maxBufferSize);
+    lineBuffer.reserve(stoi(_maxBufferSize));
     unsigned int totalBytes = 0;  // track the number of bytes consumed so far.
     CLAIM line;
     while (*input >> line) { // keep reading until there is no more input data
         lineBuffer.push_back(line); //  add the current line to the buffer and
-        totalBytes += sizeof(line); //  track the memory used.
-        if (totalBytes > _maxBufferSize - sizeof(line)) { //    sort the buffer and write to a temp file if we have filled up our quota
+        //totalBytes += sizeof(line);
+        totalBytes += sizeof(lineBuffer.size()); //  track the memory used.
+        if (totalBytes > stoi(_maxBufferSize) - sizeof(line)) { //    sort the buffer and write to a temp file if we have filled up our quota
             sort(lineBuffer.begin(), lineBuffer.end()); // sort the buffer.
             WriteToTempFile(lineBuffer); // write the sorted data to a temp file
             lineBuffer.clear(); //  clear the buffer for the next run
@@ -192,35 +215,32 @@ void KwayMergeSort::Merge() { //    Merge the sorted temp files.
     }
     CloseTempFiles();  //   clean up the temp files.
 }
-/*void KwayMergeSort::topTen() {
- std::istream *input = new std::ifstream(_outFile.c_str(), std::ios::in);
- std::ostream *output2 = new std::ofstream(_outFile2.c_str(), std::ios::out);
- std::vector<CLAIM> lineBuffer;
- lineBuffer.reserve(_maxBufferSize);
- CLAIM line;
- *input >> line;
- lineBuffer.push_back(line); //  add the current line to the buffer and
- while (*input >> line) { // keep reading until there is no more input data
- std::string currentVal;
- currentVal = line.clientID;
- lineBuffer.push_back(line); //  add the current line to the buffer and
- if (std::string(lineBuffer.front().clientID) == std::string(currentVal)) {
- for (short i = 1; i < lineBuffer.size(); ++i) {
- sprintf(lineBuffer[0].compensationAmount, "%.1f", atof(lineBuffer[0].compensationAmount) + atof(lineBuffer[i].compensationAmount));
- }
- for (short i = 1; i < lineBuffer.size(); ++i) {
- lineBuffer.erase(lineBuffer.begin() + i);
- }
- }
- else {
- //std::cout << lineBuffer[0] << "\n";
- *output2 << lineBuffer[0] << "\n";
- for (short i = 0; i < lineBuffer.size(); ++i) {
- lineBuffer.erase(lineBuffer.begin() + i);
- }
- }
- }
- *output2 << lineBuffer[0] << "\n";
- //std::cout << lineBuffer[0] << "\n";
- }*/
+void KwayMergeSort::topTen() {
+    std::istream *input = new std::ifstream(_outFile.c_str(), std::ios::in);
+    std::vector<CLAIM> lineBuffer;
+    lineBuffer.reserve(stoi(_maxBufferSize));
+    CLAIM line;
+    *input >> line;
+    lineBuffer.push_back(line); //  add the current line to the buffer.
+    while (*input >> line) { // keep reading until there is no more input data
+        std::string currentVal;
+        currentVal = line.clientID;
+        lineBuffer.push_back(line); //  add the current line to the buffer.
+        if (std::string(lineBuffer.front().clientID) == std::string(currentVal)) {
+            for (short i = 1; i < lineBuffer.size(); ++i) {
+                sprintf(lineBuffer[0].compensationAmount, "%.2f", atof(lineBuffer[0].compensationAmount) + atof(lineBuffer[i].compensationAmount));
+            }
+            for (short i = 1; i < lineBuffer.size(); ++i) {
+                lineBuffer.erase(lineBuffer.begin() + i);
+            }
+        }
+        else {
+            std::cout << lineBuffer[0] << "\n";
+            for (short i = 0; i < lineBuffer.size(); ++i) {
+                lineBuffer.erase(lineBuffer.begin() + i);
+            }
+        }
+    }
+    std::cout << lineBuffer[0] << "\n";
+}
 #endif /* KWAYMERGESORT_H */
