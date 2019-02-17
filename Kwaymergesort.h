@@ -223,37 +223,6 @@ void KwayMergeSort::Merge() { //    Merge the sorted temp files.
     }
     CloseTempFiles();  //   clean up the temp files.
 }
-/*
-void KwayMergeSort::topTen() {
-    std::istream* input  = new std::ifstream(_outFile.c_str(), std::ios::in);
-    std::ostream* output = new std::ofstream(_sumOfCompensationAmountsFile.c_str(), std::ios::out);
-    std::vector<CLAIM> lineBuffer;
-    lineBuffer.reserve(stoi(_maxBufferSize));
-    CLAIM line;
-    *input >> line;
-    lineBuffer.push_back(line); //  add the current line to the buffer.
-    while (*input >> line) { // keep reading until there is no more input data
-        std::string currentVal;
-        currentVal = line.clientID;
-        lineBuffer.push_back(line); //  add the current line to the buffer.
-        if (std::string(lineBuffer.front().clientID) == std::string(currentVal)) {
-            for (unsigned short i = 1; i < lineBuffer.size(); ++i) {
-                sprintf(lineBuffer[0].compensationAmount, "%.2f", atof(lineBuffer[0].compensationAmount) + atof(lineBuffer[i].compensationAmount));
-            }
-            for (unsigned short i = 1; i < lineBuffer.size(); ++i) {
-                lineBuffer.erase(lineBuffer.begin() + i);
-            }
-        }
-        else {
-            std::cout << lineBuffer[0] << "\n";
-            for (unsigned short i = 0; i < lineBuffer.size(); ++i) {
-                lineBuffer.erase(lineBuffer.begin() + i);
-            }
-        } // *output << lineBuffer[0] << "\n";
-    }
-    std::cout << lineBuffer[0] << "\n";
-}
-*/
 
 void KwayMergeSort::topTen() {
     std::istream* input  = new std::ifstream(_outFile.c_str(), std::ios::in);
@@ -262,7 +231,7 @@ void KwayMergeSort::topTen() {
     *input >> line0;
     while (*input >> line) { // keep reading until there is no more input data
         if (std::string(line0.clientID) == std::string(line.clientID)) {
-                sprintf(line0.compensationAmount, "%.2f", atof(line0.compensationAmount) + atof(line.compensationAmount));
+            sprintf(line0.compensationAmount, "%.2f", atof(line0.compensationAmount) + atof(line.compensationAmount));
         }
         else {
             std::cout << line0 << "\n";
@@ -270,5 +239,6 @@ void KwayMergeSort::topTen() {
             line0 = line;
         }
     }
+    std::cout << line0 << "\n";
 }
 #endif /* KWAYMERGESORT_H */
