@@ -20,7 +20,7 @@ struct CLAIM {
     //  to process the designated query in the project description file.
     //   data
     char clientID[10];
-    char compensationAmount[12];
+    char compensationAmount[13];
     
     //   overload the < (less than) operator for comparison between CLAIM records.
     bool operator < (const CLAIM &claim) const
@@ -54,7 +54,7 @@ struct CLAIM {
         is.ignore(18); //   ignore claimNumber and claimDate.
         is.get(claim.clientID, 10);
         is.ignore(214); //  ignore clientName, clientAddress, clientEmailAddress, insuredItemID, and damageAmount.
-        is.get(claim.compensationAmount, 12);
+        is.get(claim.compensationAmount, 13);
         is.ignore(1); // ignore the whitespace character at the end of each line of input
         return is;
     }
@@ -246,9 +246,9 @@ void KwayMergeSort::Merge() { //    Merge the sorted temp files.
 }
 
 void KwayMergeSort::sumOfCompensationAmounts() {
-    const std::string sumOfCompensationAmountsFile;
     std::istream* input  = new std::ifstream(_outFile.c_str(), std::ios::in);
-    std::ostream* output = new std::ofstream(sumOfCompensationAmountsFile.c_str(), std::ios::out);
+    std::ofstream sumOfCompensationAmountsFile;
+    sumOfCompensationAmountsFile.open("/Users/sinathemountain/Desktop/sumOfCompensationAmountsFile.txt");
     CLAIM line0, line;
     *input >> line0;
     while (*input >> line) { // keep reading until there is no more input data
@@ -256,21 +256,21 @@ void KwayMergeSort::sumOfCompensationAmounts() {
             sprintf(line0.compensationAmount, "%.2f", atof(line0.compensationAmount) + atof(line.compensationAmount));
         }
         else {
-            *output << line0 << std::endl;
+            sumOfCompensationAmountsFile << line0 << std::endl;
             line0 = line;
         }
     }
-    *output << line0 << std::endl;;
-}
+    sumOfCompensationAmountsFile << line0 << std::endl;;
+    sumOfCompensationAmountsFile.close();}
 
 void KwayMergeSort::showTopTenCostlyClients() {
     const std::string outFile2;
     std::istream* input = new std::ifstream(_outFile.c_str(), std::ios::in);
     CLAIM line;
-    std::cout << "Top Ten most costly clients:\n";
+    std::cout << "Client ID" << "\t" << "Sum of Compensation Amount\n\n";
     for(unsigned short i = 0; i < 10; i++) {
         *input >> line;
-        std::cout << line << std::endl;
+        std::cout << line.clientID << "\t" << line.compensationAmount << std::endl;
     }
 }
 #endif /* KWAYMERGESORT_H */
