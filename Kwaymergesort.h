@@ -20,7 +20,7 @@ struct CLAIM {
     //  to process the designated query in the project description file.
     //   data
     char clientID[10];
-    char compensationAmount[13];
+    char compensationAmount[14];
     
     //   overload the < (less than) operator for comparison between CLAIM records.
     bool operator < (const CLAIM &claim) const
@@ -54,7 +54,7 @@ struct CLAIM {
         is.ignore(18); //   ignore claimNumber and claimDate.
         is.get(claim.clientID, 10);
         is.ignore(214); //  ignore clientName, clientAddress, clientEmailAddress, insuredItemID, and damageAmount.
-        is.get(claim.compensationAmount, 13);
+        is.get(claim.compensationAmount, 14);
         is.ignore(1); // ignore the whitespace character at the end of each line of input
         return is;
     }
