@@ -77,8 +77,7 @@ struct CLAIM_SCHEMA {
     bool operator < (const CLAIM_SCHEMA &c) const
     {
         //  recall that priority queues try to sort from highest to lowest. thus, we need to negate.
-        if (comparisonFunction) {return !(comparisonFunction(datum, c.datum));}
-        else return !(datum < c.datum);
+        return !(comparisonFunction(datum, c.datum));
     }
 };
 
@@ -148,7 +147,7 @@ std::string stl_basename(const std::string &path) { //   STLized version of base
 
 void KwayMergeSort::OpenTempFiles() {
     for (size_t i=0; i < _vTempFileNames.size(); ++i) {
-        std::ifstream* file = nullptr;
+        std::ifstream* file;
         file = new std::ifstream(_vTempFileNames[i].c_str(), std::ios::in);
         if (file->good() == true) {
             _vTempFiles.push_back(file); // add a pointer to the opened temp file to the list
@@ -267,8 +266,9 @@ void KwayMergeSort::sumOfCompensationAmounts() {
 void KwayMergeSort::showTopTenCostlyClients() {
     const std::string outFile2;
     std::istream* input = new std::ifstream(_outFile.c_str(), std::ios::in);
+    CLAIM line;
+    std::cout << "Top Ten most costly clients:\n";
     for(unsigned short i = 0; i < 10; i++) {
-        CLAIM line;
         *input >> line;
         std::cout << line << std::endl;
     }
