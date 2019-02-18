@@ -248,7 +248,7 @@ void KwayMergeSort::Merge() { //    Merge the sorted temp files.
 void KwayMergeSort::sumOfCompensationAmounts() {
     std::istream* input  = new std::ifstream(_outFile.c_str(), std::ios::in);
     std::ofstream sumOfCompensationAmountsFile;
-    sumOfCompensationAmountsFile.open("/Users/sinathemountain/Desktop/sumOfCompensationAmountsFile.txt");
+    sumOfCompensationAmountsFile.open("sumOfCompensationAmountsFile.txt");
     CLAIM line0, line;
     *input >> line0;
     while (*input >> line) { // keep reading until there is no more input data
