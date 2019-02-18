@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
                                                      temporaryPath                ,
                                                      byCompensationAmount)        ;
     claim_sorter2->Sort();
-    //claim_sorter2->showTopTenCostlyClients();
+    claim_sorter2->showTopTenCostlyClients();
     
     //  report the execution time (in minutes)
     const double EXECUTION_TIME = (double)(clock() - BEGINNING) / CLOCKS_PER_SEC / 60;
