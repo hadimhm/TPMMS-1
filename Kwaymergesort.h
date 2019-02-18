@@ -220,6 +220,8 @@ void KwayMergeSort::DivideAndSort() {
         else
             sort(lineBuffer.begin(), lineBuffer.end());
         WriteToTempFile(lineBuffer); // write the sorted data to a temp file
+        ++numberOfIO;
+        std::cout << "Phase 1 writing...IO: " << numberOfIO << " --------\n";
     }
 }
 
@@ -248,6 +250,9 @@ void KwayMergeSort::Merge() { //    Merge the sorted temp files.
         *(lowest.stream) >> line; //    add the next line from the lowest stream (above) to the queue as long as it's not EOF.
         if (*(lowest.stream))
             outQueue.push( CLAIM_SCHEMA(line, lowest.stream, _compareFunction) );
+        
+        ++numberOfIO;
+        std::cout << "Phase 2 writing...IO: " << numberOfIO << "\n";
     }
     CloseTempFiles();  //   clean up the temp files.
 }
