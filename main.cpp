@@ -31,27 +31,18 @@ int main(int argc, char* argv[]) {
     //  this argument is given to the executable pogram via the command line interface.
     std::string inputFile = argv[1];
     
-    //  this argument is also given to the executable pogram via the command line interface.
-    std::string outputFile = argv[2];
-    
-    //  this argument is, too, given to the executable pogram via the command line interface.
-    std::string sumOfCompensationAmountsFile = argv[3];
-    
     //  allow the sorter to use an arbitrary amount (in bytes) of memory for sorting.
-    std::string bufferSize = argv[4];
+    std::string bufferSize = argv[2];
     
     //  once the buffer is full, the sorter will dump the buffer's content to a temporary file and grab another chunk from the input file.
-    std::string temporaryPath = argv[5]; // allows you to write the intermediate files anywhere you want.
-    
-    //  this argument is also given to the executable pogram via the command line interface.
-    std::string outputFile2 = argv[6];
+    std::string temporaryPath = argv[3]; // allows you to write the intermediate files anywhere you want.
     
     //  create a new instance of the KwayMergeSort class.
-    KwayMergeSort* claim_sorter = new KwayMergeSort (inputFile    ,
-                                                     outputFile   ,
-                                                     bufferSize   ,
-                                                     temporaryPath,
-                                                     byClientID)  ;
+    KwayMergeSort* claim_sorter = new KwayMergeSort (inputFile       ,
+                                                     "outputFile.txt",
+                                                     bufferSize      ,
+                                                     temporaryPath   ,
+                                                     byClientID)     ;
     
     //  mark the beginning of the execution of the sorting procedure
     const clock_t BEGINNING = clock();
@@ -59,11 +50,11 @@ int main(int argc, char* argv[]) {
     //  this is the main call to the sorting procedure.
     claim_sorter->Sort();
     claim_sorter->sumOfCompensationAmounts();
-    KwayMergeSort* claim_sorter2 = new KwayMergeSort (sumOfCompensationAmountsFile,
-                                                      outputFile2                  ,
-                                                      bufferSize                   ,
-                                                      temporaryPath                ,
-                                                      byCompensationAmount)        ;
+    KwayMergeSort* claim_sorter2 = new KwayMergeSort ("sumOfCompensationAmountsFile.txt",
+                                                      "outputFile2.txt"                 ,
+                                                      bufferSize                        ,
+                                                      temporaryPath                     ,
+                                                      byCompensationAmount)             ;
     claim_sorter2->Sort();
     claim_sorter2->showTopTenCostlyClients();
     
