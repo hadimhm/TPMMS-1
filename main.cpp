@@ -12,7 +12,7 @@ bool byClientID(CLAIM const &c1, CLAIM const &c2) {
 
 // comparison function for sorting by chromosome, then by start.
 bool byCompensationAmount(CLAIM const &c1, CLAIM const &c2) {
-    return (atof(c1.compensationAmount) < atof(c2.compensationAmount));
+    return (atof(c1.compensationAmount) > atof(c2.compensationAmount));
 }
 
 //  a program shall contain a global function named main, which is the designated start of the program.
@@ -55,6 +55,7 @@ int main(int argc, char* argv[]) {
                                                      temporaryPath                ,
                                                      byCompensationAmount)        ;
     claim_sorter2->Sort();
+    //claim_sorter2->showTopTenCostlyClients();
     
     //  report the execution time (in minutes)
     const double EXECUTION_TIME = (double)(clock() - BEGINNING) / CLOCKS_PER_SEC / 60;
