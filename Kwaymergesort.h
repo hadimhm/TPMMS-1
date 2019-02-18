@@ -19,8 +19,8 @@ struct CLAIM {
     //  The following two variable are actually the only attributes from the CLAIM relation that the sorter needs
     //  to process the designated query in the project description file.
     //   data
-    char clientID[10];
-    char compensationAmount[10];
+    char clientID[11];
+    char compensationAmount[11];
     
     //   overload the < (less than) operator for comparison between CLAIM records.
     bool operator < (const CLAIM &claim) const
@@ -52,9 +52,9 @@ struct CLAIM {
     friend std::istream& operator>>(std::istream &is, CLAIM &claim)
     {
         is.ignore(18); //   ignore claimNumber and claimDate.
-        is.get(claim.clientID, 10);
+        is.get(claim.clientID, 11);
         is.ignore(214); //  ignore clientName, clientAddress, clientEmailAddress, insuredItemID, and damageAmount.
-        is.get(claim.compensationAmount, 10);
+        is.get(claim.compensationAmount, 12);
         is.ignore(1); // ignore the whitespace character at the end of each line of input
         return is;
     }
@@ -77,52 +77,62 @@ struct CLAIM_SCHEMA {
     bool operator < (const CLAIM_SCHEMA &c) const
     {
         //  recall that priority queues try to sort from highest to lowest. thus, we need to negate.
-        return !(datum < c.datum);
+        if (comparisonFunction) {return !(comparisonFunction(datum, c.datum));}
+        else return !(datum < c.datum);
     }
 };
 
 struct KwayMergeSort {
     KwayMergeSort(const std::string &inFile, // constructor, using CLAIM's overloaded < operator.  Must be defined.
                   const std::string &outFile,
-                  const std::string &sumOfCompensationAmountsFile,
                   const std::string  &maxBufferSize,
-                  std::string tempPath);
+                  std::string tempPath,
+                  bool (*compareFunction)(const CLAIM &c1, const CLAIM &c2) = NULL);
+    
     ~KwayMergeSort(void); //    destructor
+    
     void Sort(); // Sort the data
+    void SetComparison(bool (*compareFunction)(const CLAIM &c1, const CLAIM &c2));   // change the sort criteria
     
     std::string _inFile;
-    bool (*_compareFunction)(const CLAIM &a, const CLAIM &b);
+    bool (*_compareFunction)(const CLAIM &c1, const CLAIM &c2);
     std::string _tempPath;
     std::vector<std::string> _vTempFileNames;
     std::vector<std::ifstream*> _vTempFiles;
     std::string _maxBufferSize;
     unsigned int _runCounter;
     std::string _outFile;
-    std::string _sumOfCompensationAmountsFile;
     void DivideAndSort(); //    drives the creation of sorted sub-files stored on disk.
     void Merge(); //    drives the merging of the sorted temp files.
     void WriteToTempFile(const std::vector<CLAIM> &lines); //   final, sorted and merged output is written to an output file.
     void OpenTempFiles();
     void CloseTempFiles();
-    void topTen();
+    void sumOfCompensationAmounts();
 };
 KwayMergeSort::KwayMergeSort (const std::string &inFile, // constructor
                               const std::string &outFile,
-                              const std::string &sumOfCompensationAmountsFile,
                               const std::string  &maxBufferSize,
-                              std::string tempPath)
+                              std::string tempPath,
+                              bool (*compareFunction)(const CLAIM &c1, const CLAIM &c2))
 : _inFile(inFile)
 , _outFile(outFile)
-, _sumOfCompensationAmountsFile(sumOfCompensationAmountsFile)
 , _tempPath(tempPath)
 , _maxBufferSize(maxBufferSize)
+, _compareFunction(compareFunction)
 , _runCounter(0) {}
+
 KwayMergeSort::~KwayMergeSort(void) {} //   destructor
+
 void KwayMergeSort::Sort() { // API for sorting.
     DivideAndSort();
     Merge();
-    topTen();
 }
+
+// change the sorting criteria
+void KwayMergeSort::SetComparison (bool (*compareFunction)(const CLAIM &c1, const CLAIM &c2)) {
+    _compareFunction = compareFunction;
+}
+
 std::string stl_basename(const std::string &path) { //   STLized version of basename() (because POSIX basename() modifies the input string pointer.)
     std::string result;
     char* path_dup = strdup(path.c_str());
@@ -186,14 +196,20 @@ void KwayMergeSort::DivideAndSort() {
         //totalBytes += sizeof(line);
         totalBytes += sizeof(lineBuffer.size()); //  track the memory used.
         if (totalBytes > stoi(_maxBufferSize) - sizeof(line)) { //    sort the buffer and write to a temp file if we have filled up our quota
-            sort(lineBuffer.begin(), lineBuffer.end()); // sort the buffer.
+            if (_compareFunction != NULL)
+                sort(lineBuffer.begin(), lineBuffer.end(), *_compareFunction);
+            else
+                sort(lineBuffer.begin(), lineBuffer.end()); //  sort the buffer.
             WriteToTempFile(lineBuffer); // write the sorted data to a temp file
             lineBuffer.clear(); //  clear the buffer for the next run
             totalBytes = 0; // make the totalBytes counter zero in order to count the bytes occupying the buffer again.
         }
     }
     if (lineBuffer.empty() == false) {  //  handle the run (if any) from the last chunk of the input file.
-        sort(lineBuffer.begin(), lineBuffer.end());
+        if (_compareFunction != NULL)
+            sort(lineBuffer.begin(), lineBuffer.end(), *_compareFunction);
+        else
+            sort(lineBuffer.begin(), lineBuffer.end());
         WriteToTempFile(lineBuffer); // write the sorted data to a temp file
     }
 }
@@ -224,9 +240,10 @@ void KwayMergeSort::Merge() { //    Merge the sorted temp files.
     CloseTempFiles();  //   clean up the temp files.
 }
 
-void KwayMergeSort::topTen() {
+void KwayMergeSort::sumOfCompensationAmounts() {
+    const std::string sumOfCompensationAmountsFile;
     std::istream* input  = new std::ifstream(_outFile.c_str(), std::ios::in);
-    std::ostream* output = new std::ofstream(_sumOfCompensationAmountsFile.c_str(), std::ios::out);
+    std::ostream* output = new std::ofstream(sumOfCompensationAmountsFile.c_str(), std::ios::out);
     CLAIM line0, line;
     *input >> line0;
     while (*input >> line) { // keep reading until there is no more input data
@@ -234,8 +251,8 @@ void KwayMergeSort::topTen() {
             sprintf(line0.compensationAmount, "%.2f", atof(line0.compensationAmount) + atof(line.compensationAmount));
         }
         else {
-                *output << line0 << std::endl;;
-                line0 = line;
+            *output << line0 << std::endl;;
+            line0 = line;
         }
     }
     *output << line0 << std::endl;;
