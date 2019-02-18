@@ -14,6 +14,7 @@
 #include <string>
 //  below, there is a basic struct for a CLAIM entry.
 //  a CLAIM tuple's structure gets defined as a new data structure.
+int numberOfIO = 0;
 struct CLAIM {
     
     //  The following two variable are actually the only attributes from the CLAIM relation that the sorter needs
@@ -197,6 +198,8 @@ void KwayMergeSort::DivideAndSort() {
     CLAIM line;
     while (*input >> line) { // keep reading until there is no more input data
         lineBuffer.push_back(line); //  add the current line to the buffer and
+        ++numberOfIO;
+        std::cout << "Phase 1 reading...IO: " << numberOfIO << "\n";
         //totalBytes += sizeof(line);
         totalBytes += sizeof(lineBuffer.size()); //  track the memory used.
         if (totalBytes > stoi(_maxBufferSize) - sizeof(line)) { //    sort the buffer and write to a temp file if we have filled up our quota
@@ -207,6 +210,8 @@ void KwayMergeSort::DivideAndSort() {
             WriteToTempFile(lineBuffer); // write the sorted data to a temp file
             lineBuffer.clear(); //  clear the buffer for the next run
             totalBytes = 0; // make the totalBytes counter zero in order to count the bytes occupying the buffer again.
+            ++numberOfIO;
+            std::cout << "Phase 1 writing...IO: " << numberOfIO << " --------\n";
         }
     }
     if (lineBuffer.empty() == false) {  //  handle the run (if any) from the last chunk of the input file.
@@ -233,6 +238,8 @@ void KwayMergeSort::Merge() { //    Merge the sorted temp files.
     for (size_t i = 0; i < _vTempFiles.size(); ++i) {
         *_vTempFiles[i] >> line;
         outQueue.push(CLAIM_SCHEMA(line, _vTempFiles[i], _compareFunction));
+        ++numberOfIO;
+        std::cout << "Phase 2 reading...IO: " << numberOfIO << "\n";
     }
     while (outQueue.empty() == false) { //  keep working until the queue is empty
         CLAIM_SCHEMA lowest = outQueue.top();  //   grab the lowest element, print it, then ditch it.
@@ -259,6 +266,9 @@ void KwayMergeSort::sumOfCompensationAmounts() {
             sumOfCompensationAmountsFile << line0 << std::endl;
             line0 = line;
         }
+        
+        ++numberOfIO;
+        std::cout << "Top 10 reading...IO: " << numberOfIO << "\n";
     }
     sumOfCompensationAmountsFile << line0 << std::endl;;
     sumOfCompensationAmountsFile.close();}
