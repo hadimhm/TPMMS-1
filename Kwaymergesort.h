@@ -19,8 +19,8 @@ struct CLAIM {
     //  The following two variable are actually the only attributes from the CLAIM relation that the sorter needs
     //  to process the designated query in the project description file.
     //   data
-    char clientID[11];
-    char compensationAmount[11];
+    char clientID[10];
+    char compensationAmount[12];
     
     //   overload the < (less than) operator for comparison between CLAIM records.
     bool operator < (const CLAIM &claim) const
@@ -52,7 +52,7 @@ struct CLAIM {
     friend std::istream& operator>>(std::istream &is, CLAIM &claim)
     {
         is.ignore(18); //   ignore claimNumber and claimDate.
-        is.get(claim.clientID, 11);
+        is.get(claim.clientID, 10);
         is.ignore(214); //  ignore clientName, clientAddress, clientEmailAddress, insuredItemID, and damageAmount.
         is.get(claim.compensationAmount, 12);
         is.ignore(1); // ignore the whitespace character at the end of each line of input
@@ -108,6 +108,7 @@ struct KwayMergeSort {
     void OpenTempFiles();
     void CloseTempFiles();
     void sumOfCompensationAmounts();
+    void showTopTenCostlyClients();
 };
 KwayMergeSort::KwayMergeSort (const std::string &inFile, // constructor
                               const std::string &outFile,
@@ -144,6 +145,7 @@ std::string stl_basename(const std::string &path) { //   STLized version of base
         result = result.substr(0,pos); // updates the length of result.
     return result;
 }
+
 void KwayMergeSort::OpenTempFiles() {
     for (size_t i=0; i < _vTempFileNames.size(); ++i) {
         std::ifstream* file = nullptr;
@@ -159,6 +161,7 @@ void KwayMergeSort::OpenTempFiles() {
         }
     }
 }
+
 void KwayMergeSort::CloseTempFiles() {
     for (size_t i=0; i < _vTempFiles.size(); ++i) { //  delete the pointers to the temp files.
         _vTempFiles[i]->close();
@@ -168,6 +171,7 @@ void KwayMergeSort::CloseTempFiles() {
         remove(_vTempFileNames[i].c_str());  // remove = UNIX "rm"
     }
 }
+
 void KwayMergeSort::WriteToTempFile(const std::vector<CLAIM> &lineBuffer) {
     std::stringstream tempFileSS; //    name the current tempfile
     if (_tempPath.size() == 0)
@@ -185,6 +189,7 @@ void KwayMergeSort::WriteToTempFile(const std::vector<CLAIM> &lineBuffer) {
     delete output;
     _vTempFileNames.push_back(tempFileName);
 }
+
 void KwayMergeSort::DivideAndSort() {
     std::istream* input = new std::ifstream(_inFile.c_str(), std::ios::in);
     std::vector<CLAIM> lineBuffer;
@@ -213,6 +218,7 @@ void KwayMergeSort::DivideAndSort() {
         WriteToTempFile(lineBuffer); // write the sorted data to a temp file
     }
 }
+
 void KwayMergeSort::Merge() { //    Merge the sorted temp files.
     // uses a priority queue, with the values being a pair of the record from the file, and the stream from which the record came
     // open the sorted temp files up for merging.
@@ -251,10 +257,20 @@ void KwayMergeSort::sumOfCompensationAmounts() {
             sprintf(line0.compensationAmount, "%.2f", atof(line0.compensationAmount) + atof(line.compensationAmount));
         }
         else {
-            *output << line0 << std::endl;;
+            *output << line0 << std::endl;
             line0 = line;
         }
     }
     *output << line0 << std::endl;;
+}
+
+void KwayMergeSort::showTopTenCostlyClients() {
+    const std::string outFile2;
+    std::istream* input = new std::ifstream(_outFile.c_str(), std::ios::in);
+    for(unsigned short i = 0; i < 10; i++) {
+        CLAIM line;
+        *input >> line;
+        std::cout << line << std::endl;
+    }
 }
 #endif /* KWAYMERGESORT_H */
