@@ -22,44 +22,13 @@
 #include <libgen.h> // This header concerns the basename() function.
 #include <sys/resource.h>
 #include <sys/time.h>
-#define MEM_ENV_VAR "MAXMEM_MB"
-
-class IMemoryManager
-{
-public:
-    virtual void* allocate(size_t) = 0;
-    virtual void   free    (void*) = 0;
-};
-
-class MemoryManager: public IMemoryManager
-{
-    struct FreeStore
-    {
-        FreeStore *next;
-    };
-    void expandPoolSize ();
-    void cleanUp ();
-    FreeStore* freeStoreHead;
-public:
-    MemoryManager () {
-        freeStoreHead = 0;
-        expandPoolSize ();
-    }
-    virtual ~MemoryManager () {
-        cleanUp ();
-    }
-    virtual void* allocate(size_t);
-    virtual void   free(void*);
-};
-
-MemoryManager gMemoryManager; // Memory Manager, global variable
 
 // A Claim record with its attributes is defined as a new data type.
 // This data struct is used for the first pass of the algorithm.
-struct CLAIM {
+struct Claim {
     
-    char claimNumber[9];
-    char claimDate[11];
+    char ClaimNumber[9];
+    char ClaimDate[11];
     char clientID[10];
     char clientName[26];
     char clientAddress[151];
@@ -68,71 +37,71 @@ struct CLAIM {
     char damageAmount[10];
     char compensationAmount[19];
     
-    //   overload the < (less than) operator for comparison between CLAIM records.
-    bool operator < (const CLAIM &claim) const
+    //   overload the < (less than) operator for comparison between Claim records.
+    bool operator < (const Claim &Claim) const
     {
         //  first try to compare clinetIDs in char format.
         //  if equal, compare their compensationAmounts.
-        if (std::strcmp(clientID, claim.clientID) != 0) {
+        if (std::strcmp(clientID, Claim.clientID) != 0) {
             
             //    convert clientID character arrays into integers in order to compare their values.
-            if      (atoi(clientID) < atoi(claim.clientID))  return true;
-            else if (atoi(clientID) > atoi(claim.clientID))  return false;
+            if      (atoi(clientID) < atoi(Claim.clientID))  return true;
+            else if (atoi(clientID) > atoi(Claim.clientID))  return false;
         }
         
         //  the sorter gets here when clientIDs are the same. now it tries to sort based on compensationAmounts.
         //  convert compensationAmount character arrays into floats in order to compare their values.
-        if      (atof(compensationAmount) < atof(claim.compensationAmount))  return true;
+        if      (atof(compensationAmount) < atof(Claim.compensationAmount))  return true;
         else return false;
     }
     
-    //    overload the << operator for writing a CLAIM record.
-    friend std::ostream& operator<<(std::ostream &os, const CLAIM &claim)
+    //    overload the << operator for writing a Claim record.
+    friend std::ostream& operator<<(std::ostream &os, const Claim &Claim)
     {
         //  The reason for inserting whitespace into the output stream is to retain the initial data format from the input file.
-        os << claim.claimNumber << claim.claimDate << claim.clientID << claim.clientName << claim.clientAddress << claim.clientEmailAddress << claim.insuredItemID << claim.damageAmount << claim.compensationAmount;
+        os << Claim.ClaimNumber << Claim.ClaimDate << Claim.clientID << Claim.clientName << Claim.clientAddress << Claim.clientEmailAddress << Claim.insuredItemID << Claim.damageAmount << Claim.compensationAmount;
         return os;
     }
     
-    //  overload the >> operator for reading into a CLAIM record.
-    friend std::istream& operator>>(std::istream &is, CLAIM &claim)
+    //  overload the >> operator for reading into a Claim record.
+    friend std::istream& operator>>(std::istream &is, Claim &Claim)
     {
-        is.get(claim.claimNumber, 9);
-        is.get(claim.claimDate, 11);
-        is.get(claim.clientID, 10);
-        is.get(claim.clientName, 26);
-        is.get(claim.clientAddress, 151);
-        is.get(claim.clientEmailAddress, 29);
-        is.get(claim.insuredItemID, 3);
-        is.get(claim.damageAmount, 10);
-        is.get(claim.compensationAmount, 19);
-        is.ignore(1); // ignore the whitespace character at the end of each line of input
+        is.get(Claim.ClaimNumber, 9);
+        is.get(Claim.ClaimDate, 11);
+        is.get(Claim.clientID, 10);
+        is.get(Claim.clientName, 26);
+        is.get(Claim.clientAddress, 151);
+        is.get(Claim.clientEmailAddress, 29);
+        is.get(Claim.insuredItemID, 3);
+        is.get(Claim.damageAmount, 10);
+        is.get(Claim.compensationAmount, 19);
+        is.ignore(1); // ignore the whitespace character at the end of each record of input
         return is;
     }
 };
 
 //  the datatype struct used by the priority_queue
-struct CLAIM_SCHEMA {
+struct Claim_SCHEMA {
     
-    CLAIM datum; //  data
+    Claim datum; //  data
     std::istream* stream;
-    bool (*comparisonFunction)(const CLAIM &c1, const CLAIM &c2);
-    CLAIM_SCHEMA (const CLAIM &datum, //    constructor
+    bool (*comparisonFunction)(const Claim &c1, const Claim &c2);
+    Claim_SCHEMA (const Claim &datum, //    constructor
                   std::istream* stream,
-                  bool (*comparisonFunction)(const CLAIM &c1, const CLAIM &c2))
+                  bool (*comparisonFunction)(const Claim &c1, const Claim &c2))
     :
     datum(datum),
     stream(stream),
     comparisonFunction(comparisonFunction) {}
     
-    bool operator < (const CLAIM_SCHEMA &c) const
+    bool operator < (const Claim_SCHEMA &c) const
     {
         //  recall that priority queues try to sort from highest to lowest. thus, we need to negate.
         return !(comparisonFunction(datum, c.datum));
     }
 };
 
-bool byClientID(CLAIM const &c1, CLAIM const &c2) {
+bool byClientID(Claim const &c1, Claim const &c2) {
     if (std::strcmp(c1.clientID, c2.clientID) != 0) {
         
         //    convert clientID character arrays into integers in order to compare their values.
@@ -147,26 +116,26 @@ bool byClientID(CLAIM const &c1, CLAIM const &c2) {
 }
 
 // comparison function for sorting by chromosome, then by start.
-bool byCompensationAmount(CLAIM const &c1, CLAIM const &c2) {
+bool byCompensationAmount(Claim const &c1, Claim const &c2) {
     return (atof(c1.compensationAmount) > atof(c2.compensationAmount));
 }
 
 struct TPMMS {
-    TPMMS(const std::string &inFile, // constructor, using CLAIM's overloaded < operator.  Must be defined.
+    TPMMS(const std::string &inFile, // constructor, using Claim's overloaded < operator.  Must be defined.
           const std::string &outFile,
           const std::string  &maxBufferSize,
           std::string tempPath,
-          bool (*compareFunction)(const CLAIM &c1, const CLAIM &c2) = NULL);
+          bool (*compareFunction)(const Claim &c1, const Claim &c2) = NULL);
     inline void* operator new(size_t);
     inline void   operator delete(void*);
     
     ~TPMMS(void); //    destructor
     
     void Sort(); // Sort the data
-    void SetComparison(bool (*compareFunction)(const CLAIM &c1, const CLAIM &c2));   // change the sort criteria
+    void SetComparison(bool (*compareFunction)(const Claim &c1, const Claim &c2));   // change the sort criteria
     
     std::string _inFile;
-    bool (*_compareFunction)(const CLAIM &c1, const CLAIM &c2);
+    bool (*_compareFunction)(const Claim &c1, const Claim &c2);
     std::string _tempPath;
     std::vector<std::string> _vTempFileNames;
     std::vector<std::ifstream*> _vTempFiles;
@@ -175,7 +144,7 @@ struct TPMMS {
     std::string _outFile;
     void Pass1(); //    drives the creation of sorted sub-files stored on disk.
     void Pass2(); //    drives the merging of the sorted temp files.
-    void WriteToTempFile(const std::vector<CLAIM> &lines); //   final, sorted and merged output is written to an output file.
+    void WriteToTempFile(const std::vector<Claim> &lines); //   final, sorted and merged output is written to an output file.
     void OpenTempFiles();
     void CloseTempFiles();
     void SumOfCompensationAmounts();
@@ -185,7 +154,7 @@ TPMMS::TPMMS (const std::string &inFile, // constructor
               const std::string &outFile,
               const std::string  &maxBufferSize,
               std::string tempPath,
-              bool (*compareFunction)(const CLAIM &c1, const CLAIM &c2))
+              bool (*compareFunction)(const Claim &c1, const Claim &c2))
 : _inFile(inFile)
 , _outFile(outFile)
 , _tempPath(tempPath)
@@ -201,60 +170,8 @@ void TPMMS::Sort() { // API for sorting.
 }
 
 // change the sorting criteria
-void TPMMS::SetComparison (bool (*compareFunction)(const CLAIM &c1, const CLAIM &c2)) {
+void TPMMS::SetComparison (bool (*compareFunction)(const Claim &c1, const Claim &c2)) {
     _compareFunction = compareFunction;
-}
-inline void* MemoryManager::allocate(size_t size)
-{
-    if (0 == freeStoreHead)
-        expandPoolSize ();
-    
-    FreeStore* head = freeStoreHead;
-    freeStoreHead = head->next;
-    return head;
-}
-
-inline void MemoryManager::free(void* deleted)
-{
-    FreeStore* head = static_cast <FreeStore*> (deleted);
-    head->next = freeStoreHead;
-    freeStoreHead = head;
-}
-
-void* TPMMS::operator new (size_t size)
-{
-    return gMemoryManager.allocate(size);
-}
-
-void TPMMS::operator delete (void* pointerToDelete)
-{
-    gMemoryManager.free(pointerToDelete);
-}
-
-#define POOLSIZE 32
-
-void MemoryManager::expandPoolSize ()
-{
-    size_t size = (sizeof(TPMMS) > sizeof(FreeStore*)) ?
-    sizeof(TPMMS) : sizeof(FreeStore*);
-    FreeStore* head = reinterpret_cast <FreeStore*> (new char[size]);
-    freeStoreHead = head;
-    
-    for (int i = 0; i < POOLSIZE; i++) {
-        head->next = reinterpret_cast <FreeStore*> (new char [size]);
-        head = head->next;
-    }
-    
-    head->next = 0;
-}
-
-void MemoryManager::cleanUp()
-{
-    FreeStore* nextPtr = freeStoreHead;
-    for (; nextPtr; nextPtr = freeStoreHead) {
-        freeStoreHead = freeStoreHead->next;
-        delete [] nextPtr; // remember this was a char array
-    }
 }
 
 std::string stl_basename(const std::string &path) { //   STLized version of basename() (because POSIX basename() modifies the input string pointer.)
@@ -296,7 +213,7 @@ void TPMMS::CloseTempFiles() {
     }
 }
 
-void TPMMS::WriteToTempFile(const std::vector<CLAIM> &lineBuffer) {
+void TPMMS::WriteToTempFile(const std::vector<Claim> &buffer) {
     std::stringstream tempFileSS; //    name the current tempfile
     if (_tempPath.size() == 0)
         tempFileSS << _inFile << "." << _runCounter;
@@ -305,8 +222,8 @@ void TPMMS::WriteToTempFile(const std::vector<CLAIM> &lineBuffer) {
     std::string tempFileName = tempFileSS.str();
     std::ofstream* output;
     output = new std::ofstream(tempFileName, std::ios::out);
-    for (size_t i = 0; i < lineBuffer.size(); ++i) { // write the contents of the current buffer to the temp file
-        *output << lineBuffer[i] << std::endl;
+    for (size_t i = 0; i < buffer.size(); ++i) { // write the contents of the current buffer to the temp file
+        *output << buffer[i] << std::endl;
     }
     ++_runCounter; //   update the tempFile number and add the tempFile to the list of tempFiles
     output->close();
@@ -316,30 +233,30 @@ void TPMMS::WriteToTempFile(const std::vector<CLAIM> &lineBuffer) {
 
 void TPMMS::Pass1() {
     std::istream* input = new std::ifstream(_inFile.c_str(), std::ios::in);
-    std::vector<CLAIM> lineBuffer;
-    lineBuffer.reserve(stoi(_maxBufferSize));
+    std::vector<Claim> buffer;
+    buffer.reserve(stoi(_maxBufferSize));
     unsigned int totalBytes = 0;  // track the number of bytes consumed so far.
-    CLAIM line;
-    while (*input >> line) { // keep reading until there is no more input data
-        lineBuffer.push_back(line); //  add the current line to the buffer and
+    Claim record;
+    while (*input >> record) { // keep reading until there is no more input data
+        buffer.push_back(record); //  add the current record to the buffer and
         //totalBytes += sizeof(line);
-        totalBytes += sizeof(line); //  track the memory used.
-        if (totalBytes > (stoi(_maxBufferSize) * sizeof(line)) - sizeof(line)) { //    sort the buffer and write to a temp file if we have filled up our quota
+        totalBytes += sizeof(record); //  track the memory used.
+        if (totalBytes > (stoi(_maxBufferSize) * sizeof(record)) - sizeof(record)) { //    sort the buffer and write to a temp file if we have filled up our quota
             if (_compareFunction != NULL)
-                sort(lineBuffer.begin(), lineBuffer.end(), *_compareFunction);
+                sort(buffer.begin(), buffer.end(), *_compareFunction);
             else
-                sort(lineBuffer.begin(), lineBuffer.end()); //  sort the buffer.
-            WriteToTempFile(lineBuffer); // write the sorted data to a temp file
-            lineBuffer.clear(); //  clear the buffer for the next run
+                sort(buffer.begin(), buffer.end()); //  sort the buffer.
+            WriteToTempFile(buffer); // write the sorted data to a temp file
+            buffer.clear(); //  clear the buffer for the next run
             totalBytes = 0; // make the totalBytes counter zero in order to count the bytes occupying the buffer again.
         }
     }
-    if (lineBuffer.empty() == false) {  //  handle the run (if any) from the last chunk of the input file.
+    if (buffer.empty() == false) {  //  handle the run (if any) from the last chunk of the input file.
         if (_compareFunction != NULL)
-            sort(lineBuffer.begin(), lineBuffer.end(), *_compareFunction);
+            sort(buffer.begin(), buffer.end(), *_compareFunction);
         else
-            sort(lineBuffer.begin(), lineBuffer.end());
-        WriteToTempFile(lineBuffer); // write the sorted data to a temp file
+            sort(buffer.begin(), buffer.end());
+        WriteToTempFile(buffer); // write the sorted data to a temp file
     }
 }
 
@@ -353,19 +270,19 @@ void TPMMS::Pass2() { //    Merge the sorted temp files.
     //  A priority queue is a container adaptor
     //  that provides constant time lookup of the largest (by default) element,
     //  at the expense of logarithmic insertion and extraction.
-    std::priority_queue<CLAIM_SCHEMA> outQueue; //  priority queue for the buffer.
-    CLAIM line; //  extract the first line from each temp file
+    std::priority_queue<Claim_SCHEMA> outQueue; //  priority queue for the buffer.
+    Claim record; //  extract the first record from each temp file
     for (size_t i = 0; i < _vTempFiles.size(); ++i) {
-        *_vTempFiles[i] >> line;
-        outQueue.push(CLAIM_SCHEMA(line, _vTempFiles[i], _compareFunction));
+        *_vTempFiles[i] >> record;
+        outQueue.push(Claim_SCHEMA(record, _vTempFiles[i], _compareFunction));
     }
     while (outQueue.empty() == false) { //  keep working until the queue is empty
-        CLAIM_SCHEMA lowest = outQueue.top();  //   grab the lowest element, print it, then ditch it.
+        Claim_SCHEMA lowest = outQueue.top();  //   grab the lowest element, print it, then ditch it.
         *output << lowest.datum << std::endl; //    write the entry from the top of the queue
         outQueue.pop(); //  remove this record from the queue
-        *(lowest.stream) >> line; //    add the next line from the lowest stream (above) to the queue as long as it's not EOF.
+        *(lowest.stream) >> record; //    add the next record from the lowest stream (above) to the queue as long as it's not EOF.
         if (*(lowest.stream))
-            outQueue.push( CLAIM_SCHEMA(line, lowest.stream, _compareFunction) );
+            outQueue.push( Claim_SCHEMA(record, lowest.stream, _compareFunction) );
     }
     CloseTempFiles();  //   clean up the temp files.
 }
@@ -374,46 +291,32 @@ void TPMMS::SumOfCompensationAmounts() {
     std::istream* input  = new std::ifstream(_outFile.c_str(), std::ios::in);
     std::ofstream SumOfCompensationAmountsFile;
     SumOfCompensationAmountsFile.open("SumOfCompensationAmountsFile.txt");
-    CLAIM line0, line;
-    *input >> line0;
-    while (*input >> line) { // keep reading until there is no more input data
-        if (std::string(line0.clientID) == std::string(line.clientID)) {
-            sprintf(line0.compensationAmount, "%.2f", atof(line0.compensationAmount) + atof(line.compensationAmount));
+    Claim initialRecord, record;
+    *input >> initialRecord;
+    while (*input >> record) { // keep reading until there is no more input data
+        if (std::string(initialRecord.clientID) == std::string(record.clientID)) {
+            sprintf(initialRecord.compensationAmount, "%.2f", atof(initialRecord.compensationAmount) + atof(record.compensationAmount));
         }
         else {
-            SumOfCompensationAmountsFile << line0 << std::endl;
-            line0 = line;
+            SumOfCompensationAmountsFile << initialRecord << std::endl;
+            initialRecord = record;
         }
     }
-    SumOfCompensationAmountsFile << line0 << std::endl;;
+    SumOfCompensationAmountsFile << initialRecord << std::endl;;
     SumOfCompensationAmountsFile.close();}
 
 void TPMMS::ShowTopTenCostliestClients() {
     const std::string outFile2;
     std::istream* input = new std::ifstream(_outFile.c_str(), std::ios::in);
-    CLAIM line;
+    Claim record;
     std::cout << "Client ID" << "\t" << "Sum of Compensation Amount\n\n";
     for(unsigned short i = 0; i < 10; i++) {
-        *input >> line;
-        std::cout << line.clientID << "\t" << line.compensationAmount << std::endl;
-        //std::cout << line << std::endl;
+        *input >> record;
+        std::cout << record.clientID << "\t" << record.compensationAmount << std::endl;
     }
-}
-
-void setmemlimit();
-//  comparison function for sorting by clientID
-void setmemlimit()
-{
-    struct rlimit memlimit;
-    long bytes;
-    bytes = (1024*1024);
-    memlimit.rlim_cur = bytes;
-    memlimit.rlim_max = bytes;
-    setrlimit(RLIMIT_AS, &memlimit);
 }
 // A program shall contain a global function named main, which is the designated start of the program.
 int main(int argc, char* argv[]) {
-    setmemlimit();
     // This argument is given to the executable pogram via the command line interface.
     std::string inputFile = argv[1];
     
@@ -433,7 +336,7 @@ int main(int argc, char* argv[]) {
     TPMMS* secondSorter = new TPMMS ("SumOfCompensationAmountsFile.txt", "outputFile2.txt", bufferSize, temporaryPath, byCompensationAmount);
     secondSorter->Sort();
     
-    const double EXECUTION_TIME = (double)(clock() - BEGINNING) / CLOCKS_PER_SEC / 60; // Report the execution time (in minutes).
+    const double EXECUTION_TIME = (double)(clock() - BEGINNING) / CLOCKS_PER_SEC; // Report the execution time (in minutes).
     
     secondSorter->ShowTopTenCostliestClients();
     
