@@ -2,7 +2,7 @@
 // Written by Sina Pilehchiha [sina.pilehchiha@mail.concordia.ca]
 // January - February 2019
 
-//#include <iostream> // This header is part of the Input/output library.
+#include <iostream> // This header is part of the Input/output library.
 #include <string>
 //#include <cstdlib>
 #include <fstream> // This header is also part of the Input/Output library.
@@ -20,8 +20,8 @@
 //#include <sys/types.h>
 //#include <unistd.h>
 #include <libgen.h> // This header concerns the basename() function.
-//#include <sys/resource.h>
-//#include <sys/time.h>
+#include <sys/resource.h>
+#include <sys/time.h>
 
 // A Claim record with its attributes is defined as a new data type.
 // This data struct is used for the first pass of the algorithm.
@@ -40,7 +40,6 @@ struct Claim {
     //    overload the << operator for writing a Claim record.
     friend std::ostream& operator<<(std::ostream &os, const Claim &Claim)
     {
-        //  The reason for inserting whitespace into the output stream is to retain the initial data format from the input file.
         os << Claim.ClaimNumber << Claim.ClaimDate << Claim.clientID << Claim.clientName << Claim.clientAddress << Claim.clientEmailAddress << Claim.insuredItemID << Claim.damageAmount << Claim.compensationAmount;
         return os;
     }
@@ -62,37 +61,29 @@ struct Claim {
     }
 };
 
-//  the datatype struct used by the priority_queue
+//  The datatype struct used by the priority_queue priorityQueue
 struct ClaimForPass2 {
     
     Claim datum; //  data
-    std::istream* stream;
+    std::istream* inputStream;
     bool (*comparisonFunction)(const Claim &c1, const Claim &c2);
     ClaimForPass2 (const Claim &datum, //    constructor
-                   std::istream* stream,
+                   std::istream* inputStream,
                    bool (*comparisonFunction)(const Claim &c1, const Claim &c2))
     :
     datum(datum),
-    stream(stream),
+    inputStream(inputStream),
     comparisonFunction(comparisonFunction) {}
     
-    bool operator < (const ClaimForPass2 &c) const
+    bool operator < (const ClaimForPass2 &claim) const
     {
-        //  recall that priority queues try to sort from highest to lowest. thus, we need to negate.
-        return !(comparisonFunction(datum, c.datum));
+        // Priority queues try to sort from highest to lowest. Eergo, one needs to negate the final return value.
+        return !(comparisonFunction(datum, claim.datum));
     }
 };
 
 bool byClientID(Claim const &c1, Claim const &c2) {
-    //if (std::strcmp(c1.clientID, c2.clientID) != 0) {
-    
-    //    convert clientID character arrays into integers in order to compare their values.
-    if      (atoi(c1.clientID) < atoi(c2.clientID))  return true;
-    //else if (atoi(c1.clientID) > atoi(c2.clientID))  return false;
-    //}
-    //  the sorter gets here when clientIDs are the same. now it tries to sort based on compensationAmounts.
-    //  convert compensationAmount character arrays into floats in order to compare their values.
-    //if      (atof(c1.compensationAmount) < atof(c2.compensationAmount))  return true;
+    if (atoi(c1.clientID) < atoi(c2.clientID))  return true;
     else return false;
 }
 
@@ -106,24 +97,24 @@ struct TPMMS {
     ~TPMMS(void); //    destructor
     
     void Sort(); // Sort the data
-    void SetComparison(bool (*compareFunction)(const Claim &c1, const Claim &c2));   // change the sort criteria
     
     std::string _inFile;
     bool (*_compareFunction)(const Claim &c1, const Claim &c2);
     std::string _tempPath;
-    std::vector<std::string> _vTempFileNames;
-    std::vector<std::ifstream*> _vTempFiles;
+    std::vector<std::string> temporaryFilesNamesList;
+    std::vector<std::ifstream*> temporaryFilesList;
     std::string _maxBufferSize;
-    unsigned int _runCounter;
+    unsigned int _chunkCounter;
     std::string _outFile;
     void Pass1(); //    drives the creation of sorted sub-files stored on disk.
     void Pass2(); //    drives the merging of the sorted temp files.
     void WriteToTempFile(const std::vector<Claim> &lines); //   final, sorted and merged output is written to an output file.
     void OpenTempFiles();
-    void CloseTempFiles();
+    void CloseTemporaryFiles();
     void SumOfCompensationAmounts();
     void ShowTopTenCostliestClients();
 };
+
 TPMMS::TPMMS (const std::string &inFile, // constructor
               const std::string &outFile,
               const std::string  &maxBufferSize,
@@ -134,18 +125,13 @@ TPMMS::TPMMS (const std::string &inFile, // constructor
 , _tempPath(tempPath)
 , _maxBufferSize(maxBufferSize)
 , _compareFunction(compareFunction)
-, _runCounter(0) {}
+, _chunkCounter(0) {}
 
 TPMMS::~TPMMS(void) {} //   destructor
 
 void TPMMS::Sort() { // API for sorting.
     Pass1();
     Pass2();
-}
-
-// change the sorting criteria
-void TPMMS::SetComparison (bool (*compareFunction)(const Claim &c1, const Claim &c2)) {
-    _compareFunction = compareFunction;
 }
 
 std::string stl_basename(const std::string &path) { //   STLized version of basename() (because POSIX basename() modifies the input string pointer.)
@@ -161,48 +147,48 @@ std::string stl_basename(const std::string &path) { //   STLized version of base
 }
 
 void TPMMS::OpenTempFiles() {
-    for (size_t i=0; i < _vTempFileNames.size(); ++i) {
+    for (size_t i=0; i < temporaryFilesNamesList.size(); ++i) {
         std::ifstream* file;
-        file = new std::ifstream(_vTempFileNames[i].c_str(), std::ios::in);
+        file = new std::ifstream(temporaryFilesNamesList[i].c_str(), std::ios::in);
         if (file->good() == true) {
-            _vTempFiles.push_back(file); // add a pointer to the opened temp file to the list
+            temporaryFilesList.push_back(file); // add a pointer to the opened temp file to the list
         }
         else {
-            std::cerr << "Unable to open temp file (" << _vTempFileNames[i]
+            std::cerr << "Unable to open temp file (" << temporaryFilesNamesList[i]
             << ").  I suspect a limit on number of open file handles.  Exiting."
             << std::endl;
-            CloseTempFiles();
+            CloseTemporaryFiles();
             exit(1);
         }
     }
 }
 
-void TPMMS::CloseTempFiles() {
-    for (size_t i=0; i < _vTempFiles.size(); ++i) { //  delete the pointers to the temp files.
-        _vTempFiles[i]->close();
-        delete _vTempFiles[i];
+void TPMMS::CloseTemporaryFiles() {
+    for (size_t i=0; i < temporaryFilesList.size(); ++i) { //  delete the pointers to the temp files.
+        temporaryFilesList[i]->close();
+        delete temporaryFilesList[i];
     }
-    for (size_t i=0; i < _vTempFileNames.size(); ++i) { //  delete the temp files from the file system.
-        remove(_vTempFileNames[i].c_str());  // remove = UNIX "rm"
+    for (size_t i=0; i < temporaryFilesNamesList.size(); ++i) { //  delete the temp files from the file system.
+        remove(temporaryFilesNamesList[i].c_str());  // remove = UNIX "rm"
     }
 }
 
 void TPMMS::WriteToTempFile(const std::vector<Claim> &buffer) {
     std::stringstream tempFileSS; //    name the current tempfile
     if (_tempPath.size() == 0)
-        tempFileSS << _inFile << "." << _runCounter;
+        tempFileSS << _inFile << "." << _chunkCounter;
     else
-        tempFileSS << _tempPath << "/" << stl_basename(_inFile) << "." << _runCounter;
-    std::string tempFileName = tempFileSS.str();
+        tempFileSS << _tempPath << "/" << stl_basename(_inFile) << "." << _chunkCounter;
+    std::string temporaryFileName = tempFileSS.str();
     std::ofstream* output;
-    output = new std::ofstream(tempFileName, std::ios::out);
-    for (size_t i = 0; i < buffer.size(); ++i) { // write the contents of the current buffer to the temp file
+    output = new std::ofstream(temporaryFileName, std::ios::out);
+    for (size_t i = 0; i < buffer.size(); ++i) { // Write the contents of the current buffer to the temporary file.
         *output << buffer[i] << std::endl;
     }
-    ++_runCounter; //   update the tempFile number and add the tempFile to the list of tempFiles
+    ++_chunkCounter; //   update the tempFile number and add the tempFile to the list of tempFiles
     output->close();
     delete output;
-    _vTempFileNames.push_back(tempFileName);
+    temporaryFilesNamesList.push_back(temporaryFileName);
 }
 
 void TPMMS::Pass1() {
@@ -227,14 +213,16 @@ void TPMMS::Pass1() {
     if (buffer.empty() == false) {  //  handle the run (if any) from the last chunk of the input file.
         sort(buffer.begin(), buffer.end(), byClientID);
         WriteToTempFile(buffer); // write the sorted data to a temp file
+        buffer.clear();
     }
     buffer.shrink_to_fit();
+    std::cout << "Phase 1 completed..." << std::endl;
 }
 
 void TPMMS::Pass2() { //    Merge the sorted temp files.
     // uses a priority queue, with the values being a pair of the record from the file, and the stream from which the record came
     // open the sorted temp files up for merging.
-    // loads ifstream pointers into _vTempFiles
+    // loads ifstream pointers into temporaryFilesList
     std::ostream *output = new std::ofstream(_outFile.c_str(), std::ios::out);
     OpenTempFiles();
     
@@ -243,19 +231,20 @@ void TPMMS::Pass2() { //    Merge the sorted temp files.
     //  at the expense of logarithmic insertion and extraction.
     std::priority_queue<ClaimForPass2> priorityQueue; //  priority queue for the buffer.
     Claim record; //  extract the first record from each temp file
-    for (size_t i = 0; i < _vTempFiles.size(); ++i) {
-        *_vTempFiles[i] >> record;
-        priorityQueue.push(ClaimForPass2(record, _vTempFiles[i], byClientID));
+    for (size_t i = 0; i < temporaryFilesList.size(); ++i) {
+        *temporaryFilesList[i] >> record;
+        priorityQueue.push(ClaimForPass2(record, temporaryFilesList[i], byClientID));
     }
     while (priorityQueue.empty() == false) { //  keep working until the queue is empty
         ClaimForPass2 lowest = priorityQueue.top();  //   grab the lowest element, print it, then ditch it.
         *output << lowest.datum << std::endl; //    write the entry from the top of the queue
         priorityQueue.pop(); //  remove this record from the queue
-        *(lowest.stream) >> record; //    add the next record from the lowest stream (above) to the queue as long as it's not EOF.
-        if (*(lowest.stream))
-            priorityQueue.push( ClaimForPass2(record, lowest.stream, byClientID) );
+        *(lowest.inputStream) >> record; //    add the next record from the lowest stream (above) to the queue as long as it's not EOF.
+        if (*(lowest.inputStream))
+            priorityQueue.push( ClaimForPass2(record, lowest.inputStream, byClientID) );
     }
-    CloseTempFiles();  //   clean up the temp files.
+    CloseTemporaryFiles();  // Clean up the temporary files.
+    std::cout << "Phase 2 completed...\nGoing to sum compensation amounts..." << std::endl;
 }
 
 void TPMMS::SumOfCompensationAmounts() {
@@ -273,18 +262,9 @@ void TPMMS::SumOfCompensationAmounts() {
             initialRecord = record;
         }
     }
-    SumOfCompensationAmountsFile << initialRecord << std::endl;;
-    SumOfCompensationAmountsFile.close();}
-
-void TPMMS::ShowTopTenCostliestClients() {
-    const std::string outFile2;
-    std::istream* input = new std::ifstream(_outFile.c_str(), std::ios::in);
-    Claim record;
-    std::cout << "Client ID" << "\t" << "Sum of Compensation Amount\n\n";
-    for(unsigned short i = 0; i < 10; i++) {
-        *input >> record;
-        std::cout << record.clientID << "\t" << record.compensationAmount << std::endl;
-    }
+    SumOfCompensationAmountsFile << initialRecord << std::endl;
+    SumOfCompensationAmountsFile.close();
+    std::cout << "Summed compensation amounts...\n" << std::endl;
 }
 
 // A Claim record with its attributes is defined as a new data type.
@@ -349,7 +329,7 @@ struct ClaimForPass22 {
     }
 };
 
-// comparison function for sorting by chromosome, then by start.
+// Comparison function for sorting by compensationAmount
 bool byCompensationAmount(Claim2 const &c1, Claim2 const &c2) {
     return (atof(c1.compensationAmount) > atof(c2.compensationAmount));
 }
@@ -364,21 +344,20 @@ struct TPMMS2 {
     ~TPMMS2(void); //    destructor
     
     void Sort2(); // Sort the data
-    void SetComparison2(bool (*compareFunction)(const Claim2 &c1, const Claim2 &c2));   // change the sort criteria
     
     std::string _inFile;
     bool (*_compareFunction)(const Claim2 &c1, const Claim2 &c2);
     std::string _tempPath;
-    std::vector<std::string> _vTempFileNames;
-    std::vector<std::ifstream*> _vTempFiles;
+    std::vector<std::string> temporaryFilesNamesList;
+    std::vector<std::ifstream*> temporaryFilesList;
     std::string _maxBufferSize;
-    unsigned int _runCounter;
+    unsigned int _chunkCounter;
     std::string _outFile;
     void Pass12(); //    drives the creation of sorted sub-files stored on disk.
     void Pass22(); //    drives the merging of the sorted temp files.
     void WriteToTempFile(const std::vector<Claim2> &lines); //   final, sorted and merged output is written to an output file.
     void OpenTempFiles();
-    void CloseTempFiles();
+    void CloseTemporaryFiles();
     void SumOfCompensationAmounts();
     void ShowTopTenCostliestClients();
 };
@@ -392,7 +371,7 @@ TPMMS2::TPMMS2 (const std::string &inFile, // constructor
 , _tempPath(tempPath)
 , _maxBufferSize(maxBufferSize)
 , _compareFunction(compareFunction)
-, _runCounter(0) {}
+, _chunkCounter(0) {}
 
 TPMMS2::~TPMMS2(void) {} //   destructor
 
@@ -401,59 +380,55 @@ void TPMMS2::Sort2() { // API for sorting.
     Pass22();
 }
 
-// change the sorting criteria
-void TPMMS2::SetComparison2 (bool (*compareFunction)(const Claim2 &c1, const Claim2 &c2)) {
-    _compareFunction = compareFunction;
-}
-
 void TPMMS2::OpenTempFiles() {
-    for (size_t i=0; i < _vTempFileNames.size(); ++i) {
+    for (size_t i=0; i < temporaryFilesNamesList.size(); ++i) {
         std::ifstream* file;
-        file = new std::ifstream(_vTempFileNames[i].c_str(), std::ios::in);
+        file = new std::ifstream(temporaryFilesNamesList[i].c_str(), std::ios::in);
         if (file->good() == true) {
-            _vTempFiles.push_back(file); // add a pointer to the opened temp file to the list
+            temporaryFilesList.push_back(file); // add a pointer to the opened temp file to the list
         }
         else {
-            std::cerr << "Unable to open temp file (" << _vTempFileNames[i]
+            std::cerr << "Unable to open temp file (" << temporaryFilesNamesList[i]
             << ").  I suspect a limit on number of open file handles.  Exiting."
             << std::endl;
-            CloseTempFiles();
+            CloseTemporaryFiles();
             exit(1);
         }
     }
 }
 
-void TPMMS2::CloseTempFiles() {
-    for (size_t i=0; i < _vTempFiles.size(); ++i) { //  delete the pointers to the temp files.
-        _vTempFiles[i]->close();
-        delete _vTempFiles[i];
+void TPMMS2::CloseTemporaryFiles() {
+    for (size_t i=0; i < temporaryFilesList.size(); ++i) { //  delete the pointers to the temp files.
+        temporaryFilesList[i]->close();
+        delete temporaryFilesList[i];
     }
-    for (size_t i=0; i < _vTempFileNames.size(); ++i) { //  delete the temp files from the file system.
-        remove(_vTempFileNames[i].c_str());  // remove = UNIX "rm"
+    for (size_t i=0; i < temporaryFilesNamesList.size(); ++i) { //  delete the temp files from the file system.
+        remove(temporaryFilesNamesList[i].c_str());  // remove = UNIX "rm"
     }
 }
 
 void TPMMS2::WriteToTempFile(const std::vector<Claim2> &buffer) {
     std::stringstream tempFileSS; //    name the current tempfile
     if (_tempPath.size() == 0)
-        tempFileSS << _inFile << "." << _runCounter;
+        tempFileSS << _inFile << "." << _chunkCounter;
     else
-        tempFileSS << _tempPath << "/" << stl_basename(_inFile) << "." << _runCounter;
-    std::string tempFileName = tempFileSS.str();
+        tempFileSS << _tempPath << "/" << stl_basename(_inFile) << "." << _chunkCounter;
+    std::string temporaryFileName = tempFileSS.str();
     std::ofstream* output;
-    output = new std::ofstream(tempFileName, std::ios::out);
+    output = new std::ofstream(temporaryFileName, std::ios::out);
     for (size_t i = 0; i < buffer.size(); ++i) { // write the contents of the current buffer to the temp file
         *output << buffer[i] << std::endl;
     }
-    ++_runCounter; //   update the tempFile number and add the tempFile to the list of tempFiles
+    ++_chunkCounter; //   update the tempFile number and add the tempFile to the list of tempFiles
     output->close();
     delete output;
-    _vTempFileNames.push_back(tempFileName);
+    temporaryFilesNamesList.push_back(temporaryFileName);
 }
 
 void TPMMS2::Pass12() {
     std::istream* input = new std::ifstream(_inFile.c_str(), std::ios::in);
     std::vector<Claim2> buffer;
+    if (_maxBufferSize == "0") {std::cerr << "Seriously? You want me to do merge sort with a buffer of size 0?" << std::endl; exit(1);}
     buffer.reserve(stoi(_maxBufferSize));
     unsigned int totalBytes = 0;  // track the number of bytes consumed so far.
     Claim2 record;
@@ -471,54 +446,37 @@ void TPMMS2::Pass12() {
     if (buffer.empty() == false) {  //  handle the run (if any) from the last chunk of the input file.
         sort(buffer.begin(), buffer.end(), byCompensationAmount);
         WriteToTempFile(buffer); // write the sorted data to a temp file
+        buffer.clear();
     }
     buffer.shrink_to_fit();
 }
 
-void TPMMS2::Pass22() { //    Merge the sorted temp files.
-    // uses a priority queue, with the values being a pair of the record from the file, and the stream from which the record came
-    // open the sorted temp files up for merging.
-    // loads ifstream pointers into _vTempFiles
+void TPMMS2::Pass22() { // Merge the sorted temporary sublists.
+    // Use a priority queue, with the values being a pair of the record from the file, and the stream from which the record came.
+    // Open the sorted temporary sublists for merging.
+    // Load ifstream pointers into temporaryFilesList
     std::ostream *output = new std::ofstream(_outFile.c_str(), std::ios::out);
     OpenTempFiles();
     
     //  A priority queue is a container adaptor
-    //  that provides constant time lookup of the largest (by default) element,
-    //  at the expense of logarithmic insertion and extraction.
+    //  That provides constant time lookup of the largest (by default) element,
+    //  At the expense of logarithmic insertion and extraction.
     std::priority_queue<ClaimForPass22> priorityQueue; //  priority queue for the buffer.
     Claim2 record; //  extract the first record from each temp file
-    for (size_t i = 0; i < _vTempFiles.size(); ++i) {
-        *_vTempFiles[i] >> record;
-        priorityQueue.push(ClaimForPass22(record, _vTempFiles[i], byCompensationAmount));
+    for (size_t i = 0; i < temporaryFilesList.size(); ++i) {
+        *temporaryFilesList[i] >> record;
+        priorityQueue.push(ClaimForPass22(record, temporaryFilesList[i], byCompensationAmount));
     }
-    while (priorityQueue.empty() == false) { //  keep working until the queue is empty
-        ClaimForPass22 lowest = priorityQueue.top();  //   grab the lowest element, print it, then ditch it.
-        *output << lowest.datum << std::endl; //    write the entry from the top of the queue
-        priorityQueue.pop(); //  remove this record from the queue
-        *(lowest.stream) >> record; //    add the next record from the lowest stream (above) to the queue as long as it's not EOF.
+    while (priorityQueue.empty() == false) { // Keep working until the queue is empty
+        ClaimForPass22 lowest = priorityQueue.top();  // Grab the lowest element, print it, then ditch it.
+        *output << lowest.datum << std::endl; // Write the entry from the top of the queue
+        priorityQueue.pop(); // Remove this record from the queue
+        *(lowest.stream) >> record; // Add the next record from the lowest stream (above) to the queue as long as it's not EOF.
         if (*(lowest.stream))
-            priorityQueue.push( ClaimForPass22(record, lowest.stream, byCompensationAmount) );
+            priorityQueue.push(ClaimForPass22(record, lowest.stream, byCompensationAmount));
     }
-    CloseTempFiles();  //   clean up the temp files.
+    CloseTemporaryFiles();  // Clean up the temporary files.
 }
-
-void TPMMS2::SumOfCompensationAmounts() {
-    std::istream* input  = new std::ifstream(_outFile.c_str(), std::ios::in);
-    std::ofstream SumOfCompensationAmountsFile;
-    SumOfCompensationAmountsFile.open("SumOfCompensationAmountsFile.txt");
-    Claim2 initialRecord, record;
-    *input >> initialRecord;
-    while (*input >> record) { // keep reading until there is no more input data
-        if (std::string(initialRecord.clientID) == std::string(record.clientID)) {
-            sprintf(initialRecord.compensationAmount, "%.2f", atof(initialRecord.compensationAmount) + atof(record.compensationAmount));
-        }
-        else {
-            SumOfCompensationAmountsFile << initialRecord << std::endl;
-            initialRecord = record;
-        }
-    }
-    SumOfCompensationAmountsFile << initialRecord << std::endl;;
-    SumOfCompensationAmountsFile.close();}
 
 void TPMMS2::ShowTopTenCostliestClients() {
     const std::string outFile2;
@@ -533,15 +491,16 @@ void TPMMS2::ShowTopTenCostliestClients() {
 
 // A program shall contain a global function named main, which is the designated start of the program.
 int main(int argc, char* argv[]) {
-    //struct rlimit limit;
-    //limit.rlim_cur = 50;
-    //limit.rlim_max = 50;
+    int who = RUSAGE_SELF;
+    struct rusage usage;
+    int ret;
+    ret = getrusage(who, &usage);
     //limit.rlim_max = RLIM_INFINITY; // send SIGKILL after 3 seconds
-    //setrlimit(RLIMIT_MEMLOCK, &limit);
+    //setrlimit(RUSAGE_SELF, &limit);
     // This argument is given to the executable pogram via the command line interface.
     std::string inputFile = argv[1];
     
-    // Allow the sorter to use an arbitrary amount (in bytes) of memory for sorting.
+    // Allow the sorter to use an arbitrary amount (in MegaBytes) of memory for sorting.
     std::string bufferSize = argv[2];
     
     // Once the buffer is full, the sorter will dump the buffer's content to a temporary file and grab another chunk from the input file.
@@ -556,7 +515,7 @@ int main(int argc, char* argv[]) {
     TPMMS2* secondSorter = new TPMMS2 ("SumOfCompensationAmountsFile.txt", "outputFile2.txt", bufferSize, temporaryPath, byCompensationAmount);
     secondSorter->Sort2();
     
-    const double EXECUTION_TIME = (double)(clock() - BEGINNING) / CLOCKS_PER_SEC / 60; // Report the execution time (in minutes).
+    const double EXECUTION_TIME = (double)(clock() - BEGINNING) / CLOCKS_PER_SEC; // Report the execution time (in minutes).
     
     secondSorter->ShowTopTenCostliestClients();
     
