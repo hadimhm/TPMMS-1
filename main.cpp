@@ -2,26 +2,26 @@
 // Written by Sina Pilehchiha [sina.pilehchiha@mail.concordia.ca]
 // January - February 2019
 
-#include <iostream> // This header is part of the Input/output library.
+//#include <iostream> // This header is part of the Input/output library.
 #include <string>
-#include <cstdlib>
+//#include <cstdlib>
 #include <fstream> // This header is also part of the Input/Output library.
-#include <vector>
-#include <math.h>
+//#include <vector>
+//#include <math.h>
 #include <algorithm>
-#include <stdlib.h>
+//#include <stdlib.h>
 #include <string.h>
 #include <sstream> // This header is, too, part of the Input/Output library.
 #include <queue> // This header is part of the containers library.
-#include <cstdio>
-#include <stdio.h>
+//#include <cstdio>
+//#include <stdio.h>
 #include <errno.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
+//#include <sys/stat.h>
+//#include <sys/types.h>
+//#include <unistd.h>
 #include <libgen.h> // This header concerns the basename() function.
-#include <sys/resource.h>
-#include <sys/time.h>
+//#include <sys/resource.h>
+//#include <sys/time.h>
 
 // A Claim record with its attributes is defined as a new data type.
 // This data struct is used for the first pass of the algorithm.
@@ -213,7 +213,6 @@ void TPMMS::Pass1() {
     unsigned int totalBytes = 0;  // track the number of bytes consumed so far.
     Claim record;
     while (*input >> record) { // keep reading until there is no more input data
-        std::cout << buffer.size() << std::endl;
         buffer.push_back(record); //  add the current record to the buffer and
         //totalBytes += sizeof(line);
         totalBytes += sizeof(record); //  track the memory used.
@@ -229,7 +228,7 @@ void TPMMS::Pass1() {
         sort(buffer.begin(), buffer.end(), byClientID);
         WriteToTempFile(buffer); // write the sorted data to a temp file
     }
-    
+    buffer.shrink_to_fit();
 }
 
 void TPMMS::Pass2() { //    Merge the sorted temp files.
@@ -473,6 +472,7 @@ void TPMMS2::Pass12() {
         sort(buffer.begin(), buffer.end(), byCompensationAmount);
         WriteToTempFile(buffer); // write the sorted data to a temp file
     }
+    buffer.shrink_to_fit();
 }
 
 void TPMMS2::Pass22() { //    Merge the sorted temp files.
@@ -533,11 +533,11 @@ void TPMMS2::ShowTopTenCostliestClients() {
 
 // A program shall contain a global function named main, which is the designated start of the program.
 int main(int argc, char* argv[]) {
-    struct rlimit limit;
-    limit.rlim_cur = 10000;
-    limit.rlim_max = 10000;
+    //struct rlimit limit;
+    //limit.rlim_cur = 50;
+    //limit.rlim_max = 50;
     //limit.rlim_max = RLIM_INFINITY; // send SIGKILL after 3 seconds
-    //setrlimit(RLIMIT_STACK, &limit);
+    //setrlimit(RLIMIT_MEMLOCK, &limit);
     // This argument is given to the executable pogram via the command line interface.
     std::string inputFile = argv[1];
     
