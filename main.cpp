@@ -515,9 +515,9 @@ int main(int argc, char* argv[]) {
     TPMMS2* secondSorter = new TPMMS2 ("SumOfCompensationAmountsFile.txt", "outputFile2.txt", bufferSize, temporaryPath, byCompensationAmount);
     secondSorter->Sort2();
     
-    const double EXECUTION_TIME = (double)(clock() - BEGINNING) / CLOCKS_PER_SEC; // Report the execution time (in minutes).
+    const double EXECUTION_TIME = (double)(clock() - BEGINNING) / CLOCKS_PER_SEC / 60; // Report the execution time (in minutes).
     
     secondSorter->ShowTopTenCostliestClients();
     
-    std::cout << "\n" << "Execution time in seconds:\t" << EXECUTION_TIME << "\n"; // Print out the time elapsed sorting.
+    std::cout << "\n" << "Execution time in minutes:\t" << EXECUTION_TIME << "\n"; // Print out the time elapsed sorting.
 }
